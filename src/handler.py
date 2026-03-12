@@ -46,7 +46,7 @@ async def async_generator_handler(job: dict[str, Any]):
         if job_input.get("query"):
             call_fn, kwargs = embedding_service.infinity_rerank, {
                 "query": job_input.get("query"),
-                "docs": job_input.get("docs"),
+                "docs": job_input.get("docs") or job_input.get("documents"),
                 "return_docs": job_input.get("return_docs"),
                 "model_name": job_input.get("model"),
             }
@@ -59,6 +59,18 @@ async def async_generator_handler(job: dict[str, Any]):
             return create_error_response(f"Invalid input: {job}").model_dump()
     try:
         out = await call_fn(**kwargs)
+
+        if job_input.get("query") and isinstance(out, list):
+            return {
+                "results": [
+                    {
+                        "index": i,
+                        "relevance_score": float(score)
+                    }
+                    for i, score in enumerate(out)
+                ]
+            }
+        
         return out
     except Exception as e:
         return create_error_response(str(e)).model_dump()
