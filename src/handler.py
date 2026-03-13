@@ -60,27 +60,24 @@ async def async_generator_handler(job: dict[str, Any]):
     try:
         out = await call_fn(**kwargs)
 
-        if hasattr(out, "model_dump"):
-            out = out.model_dump()
-        elif hasattr(out, "dict"):
-            out = out.dict()
-        elif hasattr(out, "__dict__") and not isinstance(out, (str, int, float, bool)):
-            out = vars(out)
+        if isinstance(out, tuple) and len(out) == 2:
+            scores, usage = out
 
-        if isinstance(out, dict):
-            out = {
-                k: (v.model_dump() if hasattr(v, "model_dump") else v.dict() if hasattr(v, "dict") else vars(v) if hasattr(v, "__dict__") else v)
-                for k, v in out.items()
+            serialized_scores = []
+            for s in scores:
+                if hasattr(s, "model_dump"):  # pydantic v2
+                    serialized_scores.append(s.model_dump())
+                elif hasattr(s, "dict"):  # pydantic v1
+                    serialized_scores.append(s.dict())
+                elif hasattr(s, "__dict__"):
+                    serialized_scores.append(vars(s))
+                else:
+                    serialized_scores.append(s)
+
+            return {
+                "scores": serialized_scores,
+                "usage": usage,
             }
-
-        if isinstance(out, (list, tuple, set)):
-            out = [
-                (v.model_dump() if hasattr(v, "model_dump")
-                else v.dict() if hasattr(v, "dict")
-                else vars(v) if hasattr(v, "__dict__")
-                else v)
-                for v in out
-            ]
         
         return out
     except Exception as e:
