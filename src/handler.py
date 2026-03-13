@@ -46,7 +46,7 @@ async def async_generator_handler(job: dict[str, Any]):
         if job_input.get("query"):
             call_fn, kwargs = embedding_service.infinity_rerank, {
                 "query": job_input.get("query"),
-                "docs": job_input.get("docs") or job_input.get("documents"),
+                "docs": job_input.get("docs"),
                 "return_docs": job_input.get("return_docs"),
                 "model_name": job_input.get("model"),
             }
@@ -64,17 +64,23 @@ async def async_generator_handler(job: dict[str, Any]):
             out = out.model_dump()
         elif hasattr(out, "dict"):
             out = out.dict()
+        elif hasattr(out, "__dict__") and not isinstance(out, (str, int, float, bool)):
+            out = vars(out)
 
-        if job_input.get("query") and isinstance(out, list):
-            return {
-                "results": [
-                    {
-                        "index": i,
-                        "relevance_score": float(score)
-                    }
-                    for i, score in enumerate(out)
-                ]
+        if isinstance(out, dict):
+            out = {
+                k: (v.model_dump() if hasattr(v, "model_dump") else v.dict() if hasattr(v, "dict") else vars(v) if hasattr(v, "__dict__") else v)
+                for k, v in out.items()
             }
+
+        if isinstance(out, (list, tuple, set)):
+            out = [
+                (v.model_dump() if hasattr(v, "model_dump")
+                else v.dict() if hasattr(v, "dict")
+                else vars(v) if hasattr(v, "__dict__")
+                else v)
+                for v in out
+            ]
         
         return out
     except Exception as e:
