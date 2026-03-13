@@ -141,17 +141,20 @@ def list_embeddings_to_response(
 
 
 def to_rerank_response(
-    scores: List[float],
-    model=str,
-    usage=int,
+    scores: List[Any],
+    model: str,
+    usage: int,
     documents: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     if documents is None:
         return dict(
             model=model,
             results=[
-                dict(relevance_score=score, index=count)
-                for count, score in enumerate(scores)
+                dict(
+                    relevance_score=float(score.relevance_score),
+                    index=int(score.index),
+                )
+                for score in scores
             ],
             usage=dict(prompt_tokens=usage, total_tokens=usage),
         )
@@ -159,8 +162,12 @@ def to_rerank_response(
         return dict(
             model=model,
             results=[
-                dict(relevance_score=score, index=count, document=doc)
-                for count, (score, doc) in enumerate(zip(scores, documents))
+                dict(
+                    relevance_score=float(score.relevance_score),
+                    index=int(score.index),
+                    document=documents[score.index],
+                )
+                for score in scores
             ],
             usage=dict(prompt_tokens=usage, total_tokens=usage),
         )

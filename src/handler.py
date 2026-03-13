@@ -59,26 +59,6 @@ async def async_generator_handler(job: dict[str, Any]):
             return create_error_response(f"Invalid input: {job}").model_dump()
     try:
         out = await call_fn(**kwargs)
-
-        if isinstance(out, tuple) and len(out) == 2:
-            scores, usage = out
-
-            serialized_scores = []
-            for s in scores:
-                if hasattr(s, "model_dump"):  # pydantic v2
-                    serialized_scores.append(s.model_dump())
-                elif hasattr(s, "dict"):  # pydantic v1
-                    serialized_scores.append(s.dict())
-                elif hasattr(s, "__dict__"):
-                    serialized_scores.append(vars(s))
-                else:
-                    serialized_scores.append(s)
-
-            return {
-                "scores": serialized_scores,
-                "usage": usage,
-            }
-        
         return out
     except Exception as e:
         return create_error_response(str(e)).model_dump()
