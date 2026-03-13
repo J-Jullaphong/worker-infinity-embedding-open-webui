@@ -60,6 +60,11 @@ async def async_generator_handler(job: dict[str, Any]):
     try:
         out = await call_fn(**kwargs)
 
+        if hasattr(out, "model_dump"):
+            out = out.model_dump()
+        elif hasattr(out, "dict"):
+            out = out.dict()
+
         if job_input.get("query") and isinstance(out, list):
             return {
                 "results": [
